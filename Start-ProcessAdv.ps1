@@ -6,11 +6,15 @@ function Start-ProcessAdv {
         .DESCRIPTION
             This function executes an executable file with parameters and and captures its exit code, stdout and stderr.
 
-        .PARAMETER FileName
+        .PARAMETER FilePath
             the full path to the executable file
 
-        .PARAMETER Arguments
+            only for compatibility with old versions of this function, the parameter has an alias to FileName. do not use this alias in new scripts.
+
+        .PARAMETER ArgumentList
             the arguments which should be transmitted to the executable process
+
+            only for compatibility with old versions of this function, the parameter has an alias to Arguments. do not use this alias in new scripts.
 
         .PARAMETER VERB
             should the process run as Administrator
@@ -20,16 +24,21 @@ function Start-ProcessAdv {
 
         .PARAMETER WorkingDirectory
             the directory in which the procss should work
+
+        .EXAMPLE
+            Start-ProcessAdv -FilePath 'git' -ArgumentList 'status' -TimeOut 60
     #>
     [OutputType('PSCustomObject')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
-        [String]$FileName
+        [Alias('FileName')]
+        [String]$FilePath
         ,
         [Parameter(Mandatory=$false)]
-        [String[]]$Arguments
+        [Alias('Arguments')]
+        [String[]]$ArgumentList
         ,
         [Parameter(Mandatory=$false)]
         [ValidateSet('','runas')]
@@ -40,6 +49,9 @@ function Start-ProcessAdv {
         ,
         [Parameter( Mandatory = $false)]
         [string]$WorkingDirectory = $null
+        ,
+        [Parameter( Mandatory = $false)]
+        [System.Management.Automation.PSCredential]$Credential
     )
 
     # Setting process invocation parameters.
@@ -48,16 +60,21 @@ function Start-ProcessAdv {
     $ProcessStartInfo.UseShellExecute = $false
     $ProcessStartInfo.RedirectStandardOutput = $true
     $ProcessStartInfo.RedirectStandardError = $true
-    $ProcessStartInfo.FileName = $FileName
+    $ProcessStartInfo.FileName = $FilePath
     if ( [boolean]$WorkingDirectory ) {
         $ProcessStartInfo.WorkingDirectory = $WorkingDirectory
     }
 
-    if (! [String]::IsNullOrEmpty($Arguments)) {
-        $ProcessStartInfo.Arguments = $Arguments
+    if (! [String]::IsNullOrEmpty($ArgumentList)) {
+        $ProcessStartInfo.Arguments = $ArgumentList
     }
-    if (! [String]::IsNullOrEmpty($Verb)) {
+    if ( -not [String]::IsNullOrEmpty( $Verb ) ) {
         $ProcessStartInfo.Verb = $Verb
+    }
+    if ( [boolean]$Credential ) {
+        $ProcessStartInfo.UserName = $Credential.GetNetworkCredential().UserName
+        $ProcessStartInfo.Domain   = $Credential.GetNetworkCredential().Domain
+        $ProcessStartInfo.Password = $Credential.Password
     }
 
     # Creating process object.
@@ -65,39 +82,44 @@ function Start-ProcessAdv {
     $Process.StartInfo = $ProcessStartInfo
 
     # Creating string builders to store stdout and stderr.
-    $oStdOutBuilder = New-Object -TypeName System.Text.StringBuilder
-    $oStdErrBuilder = New-Object -TypeName System.Text.StringBuilder
+    $StdOutBuilder = New-Object -TypeName System.Text.StringBuilder
+    $StdErrBuilder = New-Object -TypeName System.Text.StringBuilder
 
     # Adding event handers for stdout and stderr.
     $ScripBlock = {
-        if (! [String]::IsNullOrEmpty($EventArgs.Data)) {
-            $Event.MessageData.AppendLine($EventArgs.Data)
+        if ( -not [String]::IsNullOrEmpty( $EventArgs.Data ) ) {
+            $Event.MessageData.AppendLine( $EventArgs.Data )
         }
     }
     $StdOutEvent = Register-ObjectEvent -InputObject $Process `
         -Action $ScripBlock -EventName 'OutputDataReceived' `
-        -MessageData $oStdOutBuilder
+        -MessageData $StdOutBuilder
     $StdErrEvent = Register-ObjectEvent -InputObject $Process `
         -Action $ScripBlock -EventName 'ErrorDataReceived' `
-        -MessageData $oStdErrBuilder
+        -MessageData $StdErrBuilder
 
     # Starting process.
     [Void]$Process.Start()
     $Process.BeginOutputReadLine()
     $Process.BeginErrorReadLine()
-    [Void]$Process.WaitForExit()
+    if ( [boolean]$TimeOut ) {
+        [Void]$Process.WaitForExit( $TimeOut * 1000 )
+    }
+    else {
+        [Void]$Process.WaitForExit()
+    }
 
     # Unregistering events to retrieve process output.
     Unregister-Event -SourceIdentifier $StdOutEvent.Name
     Unregister-Event -SourceIdentifier $StdErrEvent.Name
 
-    $oResult = New-Object -TypeName PSObject -Property ([Ordered]@{
-        "ExeFile"   = $FileName;
-        "Arguments" = $Arguments -join " ";
-        "ExitCode"  = $Process.ExitCode;
-        "StdOut"    = $oStdOutBuilder.ToString().Trim();
-        "StdErr"    = $oStdErrBuilder.ToString().Trim()
-    })
+    $Result = New-Object -TypeName PSObject -Property ( [Ordered]@{
+        "ExeFile"    = $FilePath;
+        "Parameters" = $ArgumentList -join " ";
+        "ExitCode"   = $Process.ExitCode;
+        "StdOut"     = $StdOutBuilder.ToString().Trim();
+        "StdErr"     = $StdErrBuilder.ToString().Trim()
+    } )
 
-    return $oResult
+    return $Result
 }
