@@ -348,7 +348,7 @@
 #region execution
 
     #region test connectivity to Proxy
-        $ProxyConnection = [boolean]( Test-NetConnection -ComputerName $ProxyServer -Port $ProxyPort -WarningAction SilentlyContinue ).PingSucceeded
+        $ProxyConnection = [boolean]( Test-NetConnection -ComputerName $ProxyServer -Port $ProxyPort -WarningAction SilentlyContinue ).TcpTestSucceeded
     #endregion test connectivity to Proxy
 
     #region get git config
