@@ -25,6 +25,9 @@ function Start-ProcessAdv {
         .PARAMETER WorkingDirectory
             the directory in which the procss should work
 
+        .LINK
+            https://github.com/joshburkard/___PowerShell-Functions
+
         .EXAMPLE
             Start-ProcessAdv -FilePath 'git' -ArgumentList 'status' -TimeOut 60
     #>
@@ -113,12 +116,21 @@ function Start-ProcessAdv {
     Unregister-Event -SourceIdentifier $StdOutEvent.Name
     Unregister-Event -SourceIdentifier $StdErrEvent.Name
 
+    # get errors and output from the Builder object
+    $StdOut     = $StdOutBuilder.ToString().Trim()
+    $StdErr     = $StdErrBuilder.ToString().Trim()
+
+    # remove empty chars from the error and output variables
+    $StdOut = ( $StdOut.ToCharArray() | Where-Object { [boolean]$_ } ) -join ''
+    $StdErr = ( $StdErr.ToCharArray() | Where-Object { [boolean]$_ } ) -join ''
+
+    # create the return object
     $Result = New-Object -TypeName PSObject -Property ( [Ordered]@{
         "ExeFile"    = $FilePath;
         "Parameters" = $ArgumentList -join " ";
         "ExitCode"   = $Process.ExitCode;
-        "StdOut"     = $StdOutBuilder.ToString().Trim();
-        "StdErr"     = $StdErrBuilder.ToString().Trim()
+        "StdOut"     = $StdOut
+        "StdErr"     = $StdErr
     } )
 
     return $Result
