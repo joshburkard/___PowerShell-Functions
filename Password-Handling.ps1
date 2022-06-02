@@ -1,4 +1,58 @@
-﻿Function Test-ADPassword {
+﻿function Get-UserPwdInfo {
+    Param (
+        $UserDN
+    )
+    $ACCOUNTDISABLE       = 0x000002
+    $DONT_EXPIRE_PASSWORD = 0x010000
+    $PASSWORD_EXPIRED     = 0x800000
+
+    if ( [string]::IsNullOrEmpty( $UserDN ) ) {
+        $SysInfo = New-Object -ComObject "ADSystemInfo"
+        $UserDN = $SysInfo.GetType().InvokeMember("UserName", "GetProperty", $Null, $SysInfo, $Null)
+    }
+
+    $User = [ADSI]"LDAP://$UserDN"
+
+    $searcher=New-Object DirectoryServices.DirectorySearcher
+    $searcher.Filter="(&(distinguishedName=$($User.distinguishedName)))"
+    $results=$searcher.findone()
+    $PwdLastSet = [datetime]::fromfiletime($results.properties.pwdlastset[0])
+
+    $DomainName = ( $UserDN -split ',' | Where-Object { $_ -match 'DC' } | ForEach-Object { $_ -replace 'DC=', '' } ) -join '.'
+    [ADSI]$domain = "WinNT://$( $DomainName )"
+    $MaxPasswordAge = $domain.MaxPasswordAge.Value
+
+    try {
+        $ADSystemInfo = New-Object -ComObject "ADSystemInfo"
+        $DomainShortName = $ADSystemInfo.GetType().InvokeMember("DomainShortName", "GetProperty", $null, $ADSystemInfo, $null)
+    }
+    catch {
+        $DomainShortName = ''
+    }
+
+    # $ret = New-Object -TypeName PSObject -Property @{
+    $ret = [ordered]@{}
+    $ret.Add( 'userPrincipalName', $User.userPrincipalName.ToString() )
+    $ret.Add( 'sAMAccountName', $user.sAMAccountName.ToString() )
+    $ret.Add( 'UserDisplayName', $results.Properties.displayname[0].ToString() )
+    $ret.Add( 'UserDistinguishedName', $results.Properties.distinguishedname[0].ToString() )
+    $ret.Add( 'Domain', $domain.Name.ToString() )
+    $ret.Add( 'DomainPreWindows2000', $DomainShortName )
+    $ret.Add( 'Enabled', ( -not [bool]($results.Properties.useraccountcontrol[0] -band $ACCOUNTDISABLE ) ) )
+    $ret.Add( 'PasswordNeverExpires', ( [bool]($results.Properties.useraccountcontrol[0] -band $DONT_EXPIRE_PASSWORD ) ) )
+    $ret.Add( 'PasswordExpired', ( [bool]($results.Properties.useraccountcontrol[0] -band $PASSWORD_EXPIRED ) ) )
+    $ret.Add( 'MaxPasswordAge', $domain.MaxPasswordAge.Value / 3600 / 24 )
+    $ret.Add( 'MinPasswordAge', $domain.MinPasswordAge.Value / 3600 / 24 )
+    $ret.Add( 'LastPasswordSet', $PwdLastSet )
+    $ret.Add( 'CurrentPasswordAge', ( New-TimeSpan -Start $PwdLastSet -End ( Get-Date ) ) )
+    $ret.Add( 'PasswordExpiresOn', $PwdLastSet.AddSeconds( $MaxPasswordAge ) )
+    $ret.Add( 'PasswordExpiresIn', ( New-TimeSpan -Start ( Get-Date ) -End $PwdLastSet.AddSeconds( $MaxPasswordAge ) ) )
+    $ret
+}
+$UserPwdInfo = Get-UserPwdInfo
+$UserPwdInfo
+
+Function Test-ADPassword {
     [CmdletBinding()]
     [OutputType([String])]
 
@@ -73,6 +127,10 @@ $Credential.GetType().FullName
 
 Test-ADPassword -Credential $Credential
 
+
+$Credential = New-Object System.Management.Automation.PSCredential ( $UserName, ( ConvertTo-SecureString $Password -AsPlainText -Force ) )
+
+
 Function get-RandomPassword {
     Param (
         [Parameter(Mandatory = $false)]
@@ -104,3 +162,5 @@ Function get-RandomPassword {
 }
 
 get-RandomPassword -length 20
+
+
