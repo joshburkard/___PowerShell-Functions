@@ -53,71 +53,71 @@
             Write-Log -Message "Test Message 1" -Status OK -SubStepLevel 1
 
     #>
-        [CmdletBinding()]
-        param (
-            [parameter(Mandatory=$true)]
-            [ValidateSet('INFO', 'WARN', 'Warning', 'ERROR', 'VERBOSE', 'OK', 'END', 'START')]
-            [Alias('Severity')]
-            [string]
-            $Status,
-            [parameter(Mandatory=$true)]
-            [string]
-            $Message,
-            [string]
-            $LogName = "c:\Admin\Logs\OSDeployment.log"
-            ,
-            [switch]$NoOutput
-            ,
-            [Parameter(Mandatory=$false)]
-            [int]$SubStepLevel = 0
+    [CmdletBinding()]
+    param (
+        [parameter(Mandatory=$true)]
+        [ValidateSet('INFO', 'WARN', 'Warning', 'ERROR', 'VERBOSE', 'OK', 'END', 'START')]
+        [Alias('Severity')]
+        [string]
+        $Status,
+        [parameter(Mandatory=$true)]
+        [string]
+        $Message,
+        [string]
+        $LogName = "c:\Admin\Logs\OSDeployment.log"
+        ,
+        [switch]$NoOutput
+        ,
+        [Parameter(Mandatory=$false)]
+        [int]$SubStepLevel = 0
 
-        )
+    )
 
-        <# $objSMSTS = New-Object -ComObject Microsoft.SMS.TSEnvironment
-        $SMSTSLogPath = $objSMSTS.Value("_SMSTSLogPath")
+    <# $objSMSTS = New-Object -ComObject Microsoft.SMS.TSEnvironment
+    $SMSTSLogPath = $objSMSTS.Value("_SMSTSLogPath")
 
-        if (Test-Path $SMSTSLogPath) {
-            $LogFile = $(Join-Path $SMSTSLogPath $LogName)
-        } #>
-        $LogFile = $LogName
+    if (Test-Path $SMSTSLogPath) {
+        $LogFile = $(Join-Path $SMSTSLogPath $LogName)
+    } #>
+    $LogFile = $LogName
 
-        $Path = Split-Path -Path $LogFile
-        if (!(Test-Path -Path "$Path")) {
-            [void]( New-Item -Type directory -Path "$Path" -Force )
-        }
-
-        if( -not ( Test-Path -Path  $LogFile ) ) {
-            [void]( New-Item -Path $LogFile -ItemType File )
-        }
-
-        $WriteSuccess = $false
-        $retry = 0
-        do {
-            try {
-                $retry++
-                Add-Content -Path "$($LogFile)" -Value "$(([System.DateTime]::Now).ToString()) $( $Status.PadRight(8, ' ').ToUpper() ) - $Message" -ErrorAction Stop
-                $WriteSuccess = $true
-            }
-            catch {
-                # Write-Host "." -ForegroundColor Yellow -NoNewline
-                Start-Sleep -Milliseconds 10
-            }
-        } until ( ( $WriteSuccess -eq $true ) -or ( $retry -ge 5 ) )
-
-        if ( $WriteSuccess -eq $false ) {
-            Write-Host "couldn't write to log" -ForegroundColor Red
-        }
-
-        Switch ($Status) {
-            'Info'      {$FColor='gray'}
-            'Warning'   {$FColor='yellow'}
-            'Error'     {$FColor='red'}
-            'Verbose'   {$FColor='yellow'}
-            'Ok'        {$FColor='green'}
-            Default     {$FColor='gray'}
-        }
-
-        if ( $NoOutput -eq $false ) {
-            Write-Host "$(([System.DateTime]::Now).ToString()) [$($Status.PadRight(8, ' ').ToUpper())] - $($Message)"  -ForegroundColor $FColor
-        }
+    $Path = Split-Path -Path $LogFile
+    if (!(Test-Path -Path "$Path")) {
+        [void]( New-Item -Type directory -Path "$Path" -Force )
     }
+
+    if( -not ( Test-Path -Path  $LogFile ) ) {
+        [void]( New-Item -Path $LogFile -ItemType File )
+    }
+
+    $WriteSuccess = $false
+    $retry = 0
+    do {
+        try {
+            $retry++
+            Add-Content -Path "$($LogFile)" -Value "$(([System.DateTime]::Now).ToString()) $( $Status.PadRight(8, ' ').ToUpper() ) - $( ''.PadRight( ($SubStepLevel * 2) , ' ')  )$Message" -ErrorAction Stop
+            $WriteSuccess = $true
+        }
+        catch {
+            # Write-Host "." -ForegroundColor Yellow -NoNewline
+            Start-Sleep -Milliseconds 10
+        }
+    } until ( ( $WriteSuccess -eq $true ) -or ( $retry -ge 5 ) )
+
+    if ( $WriteSuccess -eq $false ) {
+        Write-Host "couldn't write to log" -ForegroundColor Red
+    }
+
+    Switch ($Status) {
+        'Info'      {$FColor='gray'}
+        'Warning'   {$FColor='yellow'}
+        'Error'     {$FColor='red'}
+        'Verbose'   {$FColor='yellow'}
+        'Ok'        {$FColor='green'}
+        Default     {$FColor='gray'}
+    }
+
+    if ( $NoOutput -eq $false ) {
+        Write-Host "$(([System.DateTime]::Now).ToString()) [$($Status.PadRight(8, ' ').ToUpper())] - $( ''.PadRight( ($SubStepLevel * 2) , ' ')  )$($Message)"  -ForegroundColor $FColor
+    }
+}
