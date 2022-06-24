@@ -2,6 +2,33 @@
     Param (
         $UserDN
     )
+
+    Function Convert-HexSIDToDec($HexSID) {
+        # Convert into normal array of bytes.
+        $strSID = "S-" + $HexSID[0]
+        $arrSID = $strSID.Split(" ")
+        $Max = $arrSID.Count
+        $DecSID = $arrSID[0] + "-" + $arrSID[1] + "-" + $arrSID[8]
+        If ($Max -eq 11) {
+            Return $DecSID
+        }
+        $Temp1 = [Int64]$arrSID[12] + (256 * ([Int64]$arrSID[13] + (256 * ([Int64]$arrSID[14] + (256 * ([Int64]$arrSID[15]))))))
+        $DecSID = $DecSID + "-" + $($Temp1)
+        If ($Max -eq 15) {
+            Return $DecSID
+        }
+        $Temp2 = [Int64]$arrSID[16] + (256 * ([Int64]$arrSID[17] + (256 * ([Int64]$arrSID[18] + (256 * ([Int64]$arrSID[19]))))))
+        $DecSID = $DecSID + "-" + $($Temp2)
+        $Temp3 = [Int64]$arrSID[20] + (256 * ([Int64]$arrSID[21] + (256 * ([Int64]$arrSID[22] + (256 * ([Int64]$arrSID[23]))))))
+        $DecSID = $DecSID + "-" + $($Temp3)
+        If ($Max -lt 24) {
+            Return $DecSID
+        }
+        $Temp4 = [Int64]$arrSID[24] + (256 * ([Int64]$arrSID[25] + (256 * ([Int64]$arrSID[26] + (256 * ([Int64]$arrSID[27]))))))
+        $DecSID = $DecSID + "-" + $($Temp4)
+        Return $DecSID
+    }
+
     $ACCOUNTDISABLE       = 0x000002
     $DONT_EXPIRE_PASSWORD = 0x010000
     $PASSWORD_EXPIRED     = 0x800000
@@ -30,10 +57,13 @@
         $DomainShortName = ''
     }
 
+    $objectSID = Convert-HexSIDToDec -HexSID $user.objectSid
+
     # $ret = New-Object -TypeName PSObject -Property @{
     $ret = [ordered]@{}
     $ret.Add( 'userPrincipalName', $User.userPrincipalName.ToString() )
     $ret.Add( 'sAMAccountName', $user.sAMAccountName.ToString() )
+    $ret.Add( 'objectSID', $objectSID )
     $ret.Add( 'UserDisplayName', $results.Properties.displayname[0].ToString() )
     $ret.Add( 'UserDistinguishedName', $results.Properties.distinguishedname[0].ToString() )
     $ret.Add( 'Domain', $domain.Name.ToString() )
@@ -162,5 +192,7 @@ Function get-RandomPassword {
 }
 
 get-RandomPassword -length 20
+
+
 
 
