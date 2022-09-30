@@ -170,8 +170,12 @@ Function get-RandomPassword {
         $SpecialChars = '' # = '!@#%&()*+-./\:;<=>?[]_{}|'
     )
     #$punc = 46..46
-    $digits = 48..57
-    $letters = 65..90 + 97..122
+    # $digits = 48..57
+    $digits = 49..57 # exclude 0
+    # $letters = 65..90 + 97..122
+    $letters = 65..72 + 74..78 + 80..90 + 97..107 + 109..122 # exclude i,l,I,O
+    # $digits | ForEach-Object { "$( $_ ) - $( [char]$_ )" }
+    # $letters | ForEach-Object { "$( $_ ) - $( [char]$_ )" }    $digits = 48..57
     $arr = $SpecialChars.ToCharArray() | ForEach-Object { [byte][char]$_ }
 
     do {
