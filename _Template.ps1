@@ -29,16 +29,12 @@ param (
 try {
     #region declarations
         #region get current path of the started script file
-            $MyInv = $MyInvocation
-            if ( [boolean]$MyInv.MyCommand.Source ) {
-                $CurrentFile = [System.IO.FileInfo]$MyInvocation.MyCommand.Source
+            switch ( $ExecutionContext.Host.Name ) {
+                "ConsoleHost" { Write-Verbose "Runbook is executed from PowerShell Console"; if ( [boolean]$MyInvocation.ScriptName ) { if ( ( $MyInvocation.ScriptName ).EndsWith( ".psm1" ) ) { $CurrentFile = [System.IO.FileInfo]$Script:MyInvocation.ScriptName } else { $CurrentFile = [System.IO.FileInfo]$MyInvocation.ScriptName } } elseif ( [boolean]$MyInvocation.MyCommand ) { if ( [boolean]$MyInvocation.MyCommand.Source ) { if ( ( $MyInvocation.MyCommand.Source ).EndsWith( ".psm1" ) ) { $CurrentFile = [System.IO.FileInfo]$Script:MyInvocation.MyCommand.Source } else { $CurrentFile = [System.IO.FileInfo]$MyInvocation.MyCommand.Source } } else { $CurrentFile = [System.IO.FileInfo]$MyInvocation.MyCommand.Path } } }
+                "Visual Studio Code Host" { Write-Verbose 'Runbook is executed from Visual Studio Code'; If ( [boolean]( $psEditor.GetEditorContext().CurrentFile.Path ) ) { Write-Verbose "c"; $CurrentFile = [System.IO.FileInfo]$psEditor.GetEditorContext().CurrentFile.Path } else { if ( ( [System.IO.FileInfo]$MyInvocation.ScriptName ).Extension -eq '.psm1' ) { Write-Verbose "d1"; $PSCallStack = Get-PSCallStack; $CurrentFile =[System.IO.FileInfo] @( $PSCallStack | Where-Object { $_.ScriptName -match '.ps1'} )[0].ScriptName } else { Write-Verbose "d2";  $CurrentFile = [System.IO.FileInfo]$MyInvocation.scriptname } } }
+                "Windows PowerShell ISE Host" { Write-Verbose 'Runbook is executed from ISE'; Write-Verbose "  CurrentFile"; $CurrentFile = [System.IO.FileInfo]( $psISE.CurrentFile.FullPath ) }
             }
-            elseif ( $MyInv.MyCommand.Path ) {
-                $CurrentFile = [System.IO.FileInfo]$MyInv.MyCommand.Path
-            }
-            elseif ( [boolean]$MyInv.InvocationName ) {
-                $CurrentFile = [System.IO.FileInfo]$MyInv.InvocationName
-            }
+
             $CurrentPath = $CurrentFile.Directory.FullName
         #endregion get current path of the started script file
     #endregion declarations
@@ -190,6 +186,10 @@ try {
             }
         #endregion create a handled error
 
+        #region end script
+            Write-Log -Message "script ended without failures" -Status OK
+            Exit 0
+        #endregion end script
     #endregion execution
 
     Write-Log -Message "script ended successfully" -Status OK

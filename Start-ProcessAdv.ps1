@@ -25,6 +25,16 @@ function Start-ProcessAdv {
         .PARAMETER WorkingDirectory
             the directory in which the procss should work
 
+        .PARAMETER WaitChildProcess
+            if this switch parameter is set, the function will wait till all child processes are finished
+
+        .PARAMETER WaitChildProcessTimeOut
+            this parameter defines the timeout in seconds for the waiting to child processes. the timeout starts after the main process finished.
+
+            if  not all childprocesses are finished, it will returnd as a warn message
+
+            this integer parameter is not mandatory. the default value is 1800 (30 minutes)
+
         .LINK
             https://github.com/joshburkard/___PowerShell-Functions
 
@@ -55,6 +65,11 @@ function Start-ProcessAdv {
         ,
         [Parameter( Mandatory = $false)]
         [System.Management.Automation.PSCredential]$Credential
+        ,
+        [switch]$WaitChildProcess
+        ,
+        [Parameter( Mandatory = $false)]
+        [int]$WaitChildProcessTimeOut = 1800
     )
 
     # Setting process invocation parameters.
@@ -84,6 +99,24 @@ function Start-ProcessAdv {
     $Process = New-Object -TypeName System.Diagnostics.Process
     $Process.StartInfo = $ProcessStartInfo
 
+    if ( [boolean]$WaitChildProcess ) {
+        $global:ChildProcessesPIDs = @()
+        # $global:ChildProcessesPIDs += $Process.Id
+
+        Register-WMIEvent -query "SELECT * FROM Win32_ProcessStartTrace" -SourceIdentifier "ChildProcessEvent" -action {
+            $e = $Event.SourceEventArgs.NewEvent
+            # Write-Host $e.ProcessName, $e.ID, $e.ParentID, "started"
+
+            # $global:a = $e
+            Write-Verbose "$( $e.ParentProcessID ) $( $e.ProcessID ) $( $e.ProcessName ) started"
+            if ( $e.ParentProcessID -in $global:ChildProcessesPIDs -and $e.ProcessName -notin @( 'WmiPrvSE.exe' ) ) {
+                $global:ChildProcessesPIDs += $e.ProcessID
+                Write-Verbose "it's a child process of the started process"
+
+            }
+        }
+    }
+
     # Creating string builders to store stdout and stderr.
     $StdOutBuilder = New-Object -TypeName System.Text.StringBuilder
     $StdErrBuilder = New-Object -TypeName System.Text.StringBuilder
@@ -103,6 +136,7 @@ function Start-ProcessAdv {
 
     # Starting process.
     [Void]$Process.Start()
+    $global:ChildProcessesPIDs += $Process.Id
     $Process.BeginOutputReadLine()
     $Process.BeginErrorReadLine()
     if ( [boolean]$TimeOut ) {
@@ -111,6 +145,7 @@ function Start-ProcessAdv {
     else {
         [Void]$Process.WaitForExit()
     }
+
 
     # Unregistering events to retrieve process output.
     Unregister-Event -SourceIdentifier $StdOutEvent.Name
@@ -131,7 +166,26 @@ function Start-ProcessAdv {
         "ExitCode"   = $Process.ExitCode;
         "StdOut"     = $StdOut
         "StdErr"     = $StdErr
+        ID           = $Process.Id
     } )
+
+    if ( [boolean]$WaitChildProcess ) {
+        Start-Sleep -Seconds 1
+        $StartTime = Get-Date
+        do {
+            Start-Sleep -Seconds 1
+            $AllProcesses = Get-WmiObject Win32_Process
+            $ChildProcesses = $AllProcesses | Where-Object { $_.ProcessID -in $global:ChildProcessesPIDs -and $_.Name -notin @('WmiPrvSE.exe')}
+        } while ( ( [boolean]$ChildProcesses ) -and ( $StartTime -gt ( Get-Date ).AddSeconds( 0 - $WaitChildProcessTimeOut ) ) )
+        if ( [boolean]$ChildProcesses ) {
+            Write-Warning -Message "not all processes are finished:"
+            $ChildProcesses | ForEach-Object {
+                Write-Warning -Message "$( $_.ProcessID.ToString().PadLeft(8, ' ') ): $( $_.Name )"
+            }
+        }
+        Unregister-Event -SourceIdentifier ChildProcessEvent
+        Remove-Variable -Name ChildProcessesPIDs -Scope Global -ErrorAction SilentlyContinue
+    }
 
     return $Result
 }

@@ -158,7 +158,7 @@ $Credential.GetType().FullName
 Test-ADPassword -Credential $Credential
 
 
-$Credential = New-Object System.Management.Automation.PSCredential ( $UserName, ( ConvertTo-SecureString $Password -AsPlainText -Force ) )
+$Credential = New-Object System.Management.Automation.PSCredential ( $UserName, ( ConvertTo-SecureString -String $Password -AsPlainText -Force ) )
 
 
 Function get-RandomPassword {
