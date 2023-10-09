@@ -153,6 +153,7 @@ try {
             Switch ($Status) {
                 'Info'      {$FColor='gray'}
                 'Warning'   {$FColor='yellow'}
+                'WARN'      {$FColor='yellow'}
                 'Error'     {$FColor='red'}
                 'Verbose'   {$FColor='yellow'}
                 'Ok'        {$FColor='green'}
@@ -191,9 +192,6 @@ try {
             Exit 0
         #endregion end script
     #endregion execution
-
-    Write-Log -Message "script ended successfully" -Status OK
-    Exit 0
 }
 catch {
     $err = $_
