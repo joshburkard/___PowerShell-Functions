@@ -200,3 +200,16 @@ get-RandomPassword -length 20
 
 
 
+Function Change-DomainPasswords {
+    Param (
+        [System.Management.Automation.PSCredential]$OldCredential = ( Get-Credential -UserName "$( $env:USERNAME )" -Message "old Password" )
+        ,
+        [System.Management.Automation.PSCredential]$newCredential = ( Get-Credential -UserName "$( $env:USERNAME )" -Message "new Password" )
+    )
+
+    $Domains = @( 'a.com', 'b.com', 'c.ch', 'd.de', 'e.eu' )
+
+    foreach ( $Domain in $Domains ) {
+        Set-ADAccountPassword -Credential $OldCredential -Server $domain -Identity $OldCredential.UserName -OldPassword $OldCredential.Password -NewPassword $newCredential.Password
+    }
+}
