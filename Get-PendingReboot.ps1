@@ -95,8 +95,8 @@ $tests = @(
     {
         # Added test to check first if keys exists, if not each group will return $Null
         # May need to evaluate what it means if one or both of these keys do not exist
-        ( 'HKLM:\SYSTEM\CurrentControlSet\Control\ComputerName\ActiveComputerName' | Where-Object { test-path $_ } | %{ (Get-ItemProperty -Path $_ ).ComputerName } ) -ne
-        ( 'HKLM:\SYSTEM\CurrentControlSet\Control\ComputerName\ComputerName' | Where-Object { Test-Path $_ } | %{ (Get-ItemProperty -Path $_ ).ComputerName } )
+        ( 'HKLM:\SYSTEM\CurrentControlSet\Control\ComputerName\ActiveComputerName' | Where-Object { test-path $_ } | foreach-object { (Get-ItemProperty -Path $_ ).ComputerName } ) -ne
+        ( 'HKLM:\SYSTEM\CurrentControlSet\Control\ComputerName\ComputerName' | Where-Object { Test-Path $_ } | foreach-object { (Get-ItemProperty -Path $_ ).ComputerName } )
     }
     <#
     {
