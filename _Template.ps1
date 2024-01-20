@@ -60,7 +60,7 @@ try {
                     the status of the message.
 
                     this string parameter is mandatory and allows one off this values:
-                        'INFO', 'WARN', 'Warning', 'ERROR', 'VERBOSE', 'OK', 'END', 'START'
+                        'INFO', 'WARN', 'ERROR', 'VERBOSE', 'OK', 'END', 'START'
 
                 .PARAMETER Message
                     the message to display
@@ -98,7 +98,7 @@ try {
             [CmdletBinding()]
             param (
                 [parameter(Mandatory=$true)]
-                [ValidateSet('INFO', 'WARN', 'Warning', 'ERROR', 'VERBOSE', 'OK', 'END', 'START')]
+                [ValidateSet('INFO', 'WARN', 'ERROR', 'VERBOSE', 'OK', 'END', 'START')]
                 [Alias('Severity')]
                 [string]
                 $Status,
@@ -137,7 +137,9 @@ try {
             do {
                 try {
                     $retry++
-                    Add-Content -Path "$($LogFile)" -Value "$(([System.DateTime]::Now).ToString()) $( $Status.PadRight(8, ' ').ToUpper() ) - $( ''.PadRight( ($SubStepLevel * 2) , ' ')  )$Message" -ErrorAction Stop
+                    $stream = [System.IO.StreamWriter]::new($LogFile, $true, ([System.Text.Utf8Encoding]::new()))
+                    $stream.WriteLine( "$( $LogDate ) $( $Status.PadRight(8, ' ').ToUpper() ) - $( ''.PadRight( ($SubStepLevel * 2) , ' ')  )$Message" )
+                    $stream.close()
                     $WriteSuccess = $true
                 }
                 catch {
