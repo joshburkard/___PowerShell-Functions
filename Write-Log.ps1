@@ -105,7 +105,13 @@
     } until ( ( $WriteSuccess -eq $true ) -or ( $retry -ge 5 ) )
 
     if ( $WriteSuccess -eq $false ) {
-        Write-Host "couldn't write to log" -ForegroundColor Red
+        try {
+            "$( $LogDate ) $( $Status.PadRight(8, ' ').ToUpper() ) - $( ''.PadRight( ($SubStepLevel * 2) , ' ')  )$Message" | Out-File -FilePath $LogFile -Encoding utf8 -Append
+            $WriteSuccess = $true
+        }
+        catch {
+            Write-Host "couldn't write to log" -ForegroundColor Red
+        }
     }
 
     Switch ($Status) {
