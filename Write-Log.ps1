@@ -18,7 +18,7 @@
             the status of the message.
 
             this string parameter is mandatory and allows one off this values:
-                'INFO', 'WARN', 'Warning', 'ERROR', 'VERBOSE', 'OK', 'END', 'START'
+                'INFO', 'WARN', 'ERROR', 'VERBOSE', 'OK', 'END', 'START'
 
         .PARAMETER Message
             the message to display
@@ -56,7 +56,7 @@
     [CmdletBinding()]
     param (
         [parameter(Mandatory=$true)]
-        [ValidateSet('INFO', 'WARN', 'Warning', 'ERROR', 'VERBOSE', 'OK', 'END', 'START')]
+        [ValidateSet('INFO', 'WARN', 'ERROR', 'VERBOSE', 'OK', 'END', 'START')]
         [Alias('Severity')]
         [string]
         $Status,
@@ -95,7 +95,9 @@
     do {
         try {
             $retry++
-            Add-Content -Path "$($LogFile)" -Value "$(([System.DateTime]::Now).ToString()) $( $Status.PadRight(8, ' ').ToUpper() ) - $( ''.PadRight( ($SubStepLevel * 2) , ' ')  )$Message" -ErrorAction Stop
+            $stream = [System.IO.StreamWriter]::new($LogFile, $true, ([System.Text.Utf8Encoding]::new()))
+            $stream.WriteLine( "$( ( [System.DateTime]::Now ).ToString() ) $( $Status.PadRight(8, ' ').ToUpper() ) - $( ''.PadRight( ($SubStepLevel * 2) , ' ')  )$Message" )
+            $stream.close()
             $WriteSuccess = $true
         }
         catch {
@@ -106,7 +108,7 @@
 
     if ( $WriteSuccess -eq $false ) {
         try {
-            "$( $LogDate ) $( $Status.PadRight(8, ' ').ToUpper() ) - $( ''.PadRight( ($SubStepLevel * 2) , ' ')  )$Message" | Out-File -FilePath $LogFile -Encoding utf8 -Append
+            "$( ( [System.DateTime]::Now ).ToString() ) $( $Status.PadRight(8, ' ').ToUpper() ) - $( ''.PadRight( ($SubStepLevel * 2) , ' ')  )$Message" | Out-File -FilePath $LogFile -Encoding utf8 -Append
             $WriteSuccess = $true
         }
         catch {
@@ -117,6 +119,7 @@
     Switch ($Status) {
         'Info'      {$FColor='gray'}
         'Warning'   {$FColor='yellow'}
+        'WARN'      {$FColor='yellow'}
         'Error'     {$FColor='red'}
         'Verbose'   {$FColor='yellow'}
         'Ok'        {$FColor='green'}
