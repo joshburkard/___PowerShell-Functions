@@ -149,7 +149,13 @@ try {
             } until ( ( $WriteSuccess -eq $true ) -or ( $retry -ge 5 ) )
 
             if ( $WriteSuccess -eq $false ) {
-                Write-Host "couldn't write to log" -ForegroundColor Red
+                try {
+                    "$( $LogDate ) $( $Status.PadRight(8, ' ').ToUpper() ) - $( ''.PadRight( ($SubStepLevel * 2) , ' ')  )$Message" | Out-File -FilePath $LogFile -Encoding utf8 -Append
+                    $WriteSuccess = $true
+                }
+                catch {
+                    Write-Host "couldn't write to log" -ForegroundColor Red
+                }
             }
 
             Switch ($Status) {
@@ -174,7 +180,14 @@ try {
             $PSDefaultParameterValues = @{}
             $PSDefaultParameterValues.Add( "Write-Log:LogName", "$( $CurrentPath )\Logs\$( $CurrentFile.BaseName )-$( Get-Date -Format "yyyyMMdd-HHmmss" ).log" )
             Write-Log -Message "started script $( $CurrentFile.Name )" -Status INFO
-            Write-Log -Message "write log to file $( $PSDefaultParameterValues.'Write-Log:LogName' )" -Status INFO
+            Write-Log -Message "write log to file $( $PSDefaultParameterValues.'Write-Log:LogName' )" -Status INFO -SubStepLevel 1
+
+            if ( [boolean]$PSBoundParameters.GetEnumerator() ) {
+                Write-Log "started with parameters:" -Status INFO -SubStepLevel 1
+                foreach ( $bp in $PSBoundParameters.GetEnumerator() ) {
+                    Write-Log -Message "$( $bp.Key ) : $( $bp.Value )" -Status INFO -SubStepLevel 2
+                }
+            }
         #endregion start logging
 
         Write-Verbose "This is only a verbose test"
