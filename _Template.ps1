@@ -222,13 +222,23 @@ catch {
     $LineNumber = $err.InvocationInfo.ScriptLineNumber
     $Col = $err.InvocationInfo.OffsetInLine
 
-    Write-Output "Error Occured at:"
-    if ( [boolean]$ScriptName ) {
-        Write-Output "  ScriptName:  $($ScriptName)"
+    if ( Get-Command -Name Write-Log -ErrorAction SilentlyContinue ) {
+        Write-Log -Message "Error Occured at:" -Status ERROR
+        if ( [boolean]$ScriptName ) {
+            Write-Log -Message "ScriptName:  $($ScriptName)" -Status ERROR -SubStepLevel 1
+        }
+        Write-Log -Message "LineNumber:  $($LineNumber)" -Status ERROR -SubStepLevel 1
+        Write-Log -Message "Col:         $($Col)" -Status ERROR -SubStepLevel 1
+        Write-log -Message "Content:     $($Content)" -Status ERROR -SubStepLevel 1
     }
-    Write-Output "  LineNumber:  $($LineNumber)"
-    Write-Output "  Col:         $($Col)"
-    Write-Output "  Content:     $($Content)"
-
+    else {
+        Write-Output "Error Occured at:"
+        if ( [boolean]$ScriptName ) {
+            Write-Output "  ScriptName:  $($ScriptName)"
+        }
+        Write-Output "  LineNumber:  $($LineNumber)"
+        Write-Output "  Col:         $($Col)"
+        Write-Output "  Content:     $($Content)"
+    }
     Exit 1
 }
