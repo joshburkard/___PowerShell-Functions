@@ -252,7 +252,8 @@ try {
     #region execution
         #region start logging
             $PSDefaultParameterValues = @{}
-            $PSDefaultParameterValues.Add( "Write-Log:LogName", "$( $CurrentPath )\Logs\$( $CurrentFile.BaseName )-$( Get-Date -Format "yyyyMMdd-HHmmss" ).log" )
+            # $PSDefaultParameterValues.Add( "Write-Log:LogName", "$( $CurrentPath )\Logs\$( $CurrentFile.BaseName )-$( Get-Date -Format "yyyyMMdd-HHmmss" ).log" )
+            $PSDefaultParameterValues.Add( "Write-Log:LogName", "C:\Admin\Logs\OSD\$( Get-Date -Format "yyyyMMdd-HHmmss" )-$( $CurrentFile.BaseName ).log" )
             Write-Log -Message "started script $( $CurrentFile.Name )" -Status INFO
             Write-Log -Message "write log to file $( $PSDefaultParameterValues.'Write-Log:LogName' )" -Status INFO -SubStepLevel 1
 
