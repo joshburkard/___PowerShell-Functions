@@ -68,51 +68,50 @@
         ,
         [switch]$NoOutput
         ,
+        [switch]$NoLog
+        ,
         [Parameter(Mandatory=$false)]
         [int]$SubStepLevel = 0
 
     )
 
-    <# $objSMSTS = New-Object -ComObject Microsoft.SMS.TSEnvironment
-    $SMSTSLogPath = $objSMSTS.Value("_SMSTSLogPath")
+    if ( $NoLog -eq $false ) {
+        $LogFile = $LogName
 
-    if (Test-Path $SMSTSLogPath) {
-        $LogFile = $(Join-Path $SMSTSLogPath $LogName)
-    } #>
-    $LogFile = $LogName
-
-    $Path = Split-Path -Path $LogFile
-    if (!(Test-Path -Path "$Path")) {
-        [void]( New-Item -Type directory -Path "$Path" -Force )
-    }
-
-    if( -not ( Test-Path -Path  $LogFile ) ) {
-        [void]( New-Item -Path $LogFile -ItemType File )
-    }
-
-    $WriteSuccess = $false
-    $retry = 0
-    do {
-        try {
-            $retry++
-            $stream = [System.IO.StreamWriter]::new($LogFile, $true, ([System.Text.Utf8Encoding]::new()))
-            $stream.WriteLine( "$( ( [System.DateTime]::Now ).ToString() ) $( $Status.PadRight(8, ' ').ToUpper() ) - $( ''.PadRight( ($SubStepLevel * 2) , ' ')  )$Message" )
-            $stream.close()
-            $WriteSuccess = $true
+        $Path = Split-Path -Path $LogFile
+        if (!(Test-Path -Path "$Path")) {
+            [void]( New-Item -Type directory -Path "$Path" -Force )
         }
-        catch {
-            # Write-Host "." -ForegroundColor Yellow -NoNewline
-            Start-Sleep -Milliseconds 10
-        }
-    } until ( ( $WriteSuccess -eq $true ) -or ( $retry -ge 5 ) )
 
-    if ( $WriteSuccess -eq $false ) {
-        try {
-            "$( ( [System.DateTime]::Now ).ToString() ) $( $Status.PadRight(8, ' ').ToUpper() ) - $( ''.PadRight( ($SubStepLevel * 2) , ' ')  )$Message" | Out-File -FilePath $LogFile -Encoding utf8 -Append
-            $WriteSuccess = $true
+        if( -not ( Test-Path -Path  $LogFile ) ) {
+            [void]( New-Item -Path $LogFile -ItemType File )
         }
-        catch {
-            Write-Host "couldn't write to log" -ForegroundColor Red
+
+        $WriteSuccess = $false
+        $LogMessage = $Message -Replace "((\033\[)(\d*)m)", ''
+        $retry = 0
+        do {
+            try {
+                $retry++
+                $stream = [System.IO.StreamWriter]::new($LogFile, $true, ([System.Text.Utf8Encoding]::new()))
+                $stream.WriteLine( "$( ( [System.DateTime]::Now ).ToString() ) $( $Status.PadRight(8, ' ').ToUpper() ) - $( ''.PadRight( ($SubStepLevel * 2) , ' ')  )$LogMessage" )
+                $stream.close()
+                $WriteSuccess = $true
+            }
+            catch {
+                # Write-Host "." -ForegroundColor Yellow -NoNewline
+                Start-Sleep -Milliseconds 10
+            }
+        } until ( ( $WriteSuccess -eq $true ) -or ( $retry -ge 5 ) )
+
+        if ( $WriteSuccess -eq $false ) {
+            try {
+                "$( ( [System.DateTime]::Now ).ToString() ) $( $Status.PadRight(8, ' ').ToUpper() ) - $( ''.PadRight( ($SubStepLevel * 2) , ' ')  )$LogMessage" | Out-File -FilePath $LogFile -Encoding utf8 -Append
+                $WriteSuccess = $true
+            }
+            catch {
+                Write-Host "couldn't write to log" -ForegroundColor Red
+            }
         }
     }
 
