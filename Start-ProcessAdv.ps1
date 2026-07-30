@@ -99,8 +99,8 @@ function Start-ProcessAdv {
     $Process = New-Object -TypeName System.Diagnostics.Process
     $Process.StartInfo = $ProcessStartInfo
 
+    $global:ChildProcessesPIDs = @()
     if ( [boolean]$WaitChildProcess ) {
-        $global:ChildProcessesPIDs = @()
         # $global:ChildProcessesPIDs += $Process.Id
 
         Register-WMIEvent -query "SELECT * FROM Win32_ProcessStartTrace" -SourceIdentifier "ChildProcessEvent" -action {
